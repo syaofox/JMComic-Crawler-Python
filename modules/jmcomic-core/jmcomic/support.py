@@ -155,20 +155,18 @@ class JmcomicText:
     @classmethod
     def reflect_new_instance(cls, html: str, cls_field_prefix: str, clazz: type):
 
-        def match_field(field_key: str, pattern: Pattern, text):
-            pattern: Union[Pattern, List[Pattern]]
+        def match_field(field_key: str, pattern: Union[Pattern, List[Pattern]], text):
 
             if isinstance(pattern, list):
-                # 如果是 pattern_value 是 List[re.Pattern]，
-                # 取最后一个 pattern 给 pattern_value，
+                # 如果是 pattern 是 List[re.Pattern]，
+                # 取最后一个 pattern 用于 match field，
                 # 其他的 pattern 用来给文本缩小范围（相当于多次正则匹配）
                 last_pattern = pattern[len(pattern) - 1]
                 # 缩小文本
                 for i in range(0, len(pattern) - 1):
                     match = pattern[i].search(text)
                     if match is None:
-                        with open('a.html', 'w', encoding='utf-8') as f:
-                            f.write(text)
+                        return None
                     text = match[0]
                 pattern = last_pattern
 
