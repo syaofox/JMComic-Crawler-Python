@@ -15,20 +15,22 @@ def download_album(jm_album_id, option: JmOption = None):
              f'获得album_detail成功，准备下载。本子作者是【{album_detail.author}】，一共有{len(album_detail)}集本子')
 
     def download_photo(index, photo_detail: JmPhotoDetail, debug_topic='download_album_photo'):
+        jm_client.fill_photo_data_original(photo_detail)
+
         jm_debug(debug_topic,
-                 f"下载第{index + 1}集，"
-                 f"长度为{len(photo_detail)}，"
-                 f"标题为：{photo_detail.title} "
+                 f"下载第[{index + 1}]集: "
+                 f"图片数为[{len(photo_detail)}]，"
+                 f"标题为：({photo_detail.title}) "
                  f"-- photo {photo_detail.photo_id}")
 
         download_by_photo_detail(
             photo_detail,
             jm_client,
             option,
-            fill_photo_data_original=True
         )
+
         jm_debug(debug_topic,
-                 f"下载完成：{photo_detail.title} -- photo {photo_detail.photo_id}")
+                 f"下载完成：({photo_detail.title}) -- photo {photo_detail.photo_id}")
 
     multi_thread_launcher(
         iter_objs=enumerate(album_detail),

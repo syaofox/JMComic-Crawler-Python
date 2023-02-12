@@ -12,12 +12,12 @@ class JmModuleConfig:
     HTTPS = "https://"
     DOMAIN = "jmcomic1.rocks"  # jmcomic默认域名
     JM_REDIRECT_URL = 'https://jm365.me/3YeBdF'
-    JM_PUB_URL = 'https://jmcomic.bet'
+    JM_PUB_URL = 'https://jmcomic1.bet'
     JM_SERVER_ERROR_HTML = "Could not connect to mysql! Please check your database settings!"
     JM_CDN_IMAGE_URL_TEMPLATE = 'https://cdn-msp.{domain}/media/photos/{photo_id}/{index:05}{suffix}'  # index 从1开始
     SCRAMBLE_0 = 220980
     SCRAMBLE_10 = 268850
-    SCRAMBLE_8 = 421926 # 2023-02-08后改了图片切割算法
+    SCRAMBLE_8 = 421926  # 2023-02-08后改了图片切割算法
 
     Resp = Response
     enable_jm_debug = True
