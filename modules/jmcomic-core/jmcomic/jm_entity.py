@@ -1,8 +1,8 @@
-from typing import Optional, List, Tuple, Iterable, Callable, Type
+from typing import List, Tuple, Iterable, Callable
 
 from common import SaveableEntity, IterableEntity, workspace
 
-StrNone = Optional[str]
+from .jm_config import *
 
 
 class JmBaseEntity:
@@ -16,10 +16,10 @@ class WorkEntity(JmBaseEntity, SaveableEntity, IterableEntity):
 
     cache_getitem_result = True
     cache_field_name = '__cache_items_dict__'
-    jm_save_base_dir = workspace()
+    detail_save_base_dir = workspace()
 
     def save_base_dir(self):
-        return self.jm_save_base_dir
+        return self.detail_save_base_dir
 
     def save_file_name(self) -> str:
         return f"【{self.get_id_prefix_of_filename()}{self.get_id()}】{self.get_title()}.json"
@@ -93,7 +93,6 @@ class JmImageDetail(JmBaseEntity):
 
 
 class JmPhotoDetail(WorkEntity):
-    default_author_if_missing = 'default'
 
     def __init__(self,
                  photo_id,
@@ -137,7 +136,7 @@ class JmPhotoDetail(WorkEntity):
             return self.from_album.author
 
         # 无向上元素，使用默认
-        return self.default_author_if_missing
+        return JmModuleConfig.default_author
 
     def create_image_detail(self, index) -> JmImageDetail:
         # 校验参数
@@ -218,7 +217,9 @@ class JmAlbumDetail(WorkEntity):
 
     @property
     def author(self):
-        return self._author_list[0]
+        if len(self._author_list) >= 1:
+            return self._author_list[0]
+        return JmModuleConfig.default_author
 
     def get_id(self):
         return self.album_id
@@ -281,85 +282,4 @@ class CdnRequest:
             from_index,
             photo_len,
             save_path_provider,
-        )
-
-
-# 爬取策略
-class FetchStrategy:
-
-    def __init__(self,
-                 from_index,
-                 photo_len,
-                 resp_getter,
-                 resp_consumer,
-                 ):
-        self.from_index = from_index
-        self.photo_len = photo_len
-        self.resp_getter = resp_getter
-        self.resp_consumer = resp_consumer
-
-    def do_fetch(self):
-        raise NotImplementedError
-
-    def args(self):
-        return (self.from_index,
-                self.photo_len,
-                self.resp_getter,
-                self.resp_consumer,
-                )
-
-
-# cdn配置项
-class CdnConfig:
-
-    def __init__(self,
-                 cdn_domain: str,
-                 cdn_image_suffix: str,
-                 fetch_strategy: Type[FetchStrategy],
-                 use_cache,
-                 decode_image,
-                 ):
-        self.cdn_domain = cdn_domain
-        self.cdn_image_suffix = cdn_image_suffix
-        self.fetch_strategy = fetch_strategy
-        self.use_cache = use_cache
-        self.decode_image = decode_image
-
-    def get_cdn_image_url(self, photo_id: str, index: int) -> str:
-        from .support import JmModuleConfig
-
-        return JmModuleConfig.JM_CDN_IMAGE_URL_TEMPLATE.format(
-            domain=self.cdn_domain,
-            photo_id=photo_id,
-            index=index,
-            suffix=self.cdn_image_suffix
-        )
-
-    def check_request_is_valid(self, req: CdnRequest):
-        from common import is_function
-
-        if req.photo_len is not None and not isinstance(req.photo_len, int):
-            raise AssertionError('传参错误，photo_len要么给整数，要么给None')
-        if not is_function(req.save_path_provider):
-            raise AssertionError('传参错误，save_path_provider应该是函数')
-        if self.decode_image is True and req.scramble_id is None:
-            raise AssertionError('传参缺失，指定decode_image=True，就必须提供scramble_id')
-        if req.from_index <= 0:
-            raise AssertionError(f'传参错误，from_index必须大于1: {req.from_index} < 1')
-
-    @classmethod
-    def create(cls,
-               cdn_domain,
-               fetch_strategy,
-               cdn_image_suffix=None,
-               use_cache=False,
-               decode_image=True,
-               ):
-
-        return CdnConfig(
-            cdn_domain,
-            cdn_image_suffix or '.webp',
-            fetch_strategy,
-            use_cache,
-            decode_image,
         )

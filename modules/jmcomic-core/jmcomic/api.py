@@ -1,18 +1,38 @@
 from common import multi_thread_launcher
 
 from .jm_option import *
-from .jm_client import *
-from .support import *
+from .jm_toolkit import *
 
 
-def download_album(jm_album_id, option: JmOption = None):
+def build_client(option: Optional[JmOption]) -> Tuple[JmOption, JmcomicClient]:
+    """
+    处理option的判空，并且创建jm_client
+    """
     option = option or JmOption.default()
-
     jm_client = option.build_jm_client()
+    return option, jm_client
+
+
+def option(option_filepath: str, use_workspace=True) -> JmOption:
+    """
+    创建JmOption的api
+    """
+    if use_workspace is True:
+        option_filepath = workspace(option_filepath)
+
+    return JmOption.create_from_file(option_filepath)
+
+
+def download_album(jm_album_id, option=None):
+    """
+    下载一个本子集，入口api
+    """
+    option, jm_client = build_client(option)
     album_detail: JmAlbumDetail = jm_client.get_album_detail(jm_album_id)
 
     jm_debug('download_album',
-             f'获得album_detail成功，准备下载。本子作者是【{album_detail.author}】，一共有{len(album_detail)}集本子')
+             f'获得album_detail成功，准备下载。'
+             f'本子作者是【{album_detail.author}】，一共有{len(album_detail)}集本子')
 
     def download_photo(index, photo_detail: JmPhotoDetail, debug_topic='download_album_photo'):
         jm_client.fill_photo_data_original(photo_detail)
@@ -25,7 +45,6 @@ def download_album(jm_album_id, option: JmOption = None):
 
         download_by_photo_detail(
             photo_detail,
-            jm_client,
             option,
         )
 
@@ -39,12 +58,24 @@ def download_album(jm_album_id, option: JmOption = None):
     )
 
 
+def download_photo(jm_photo_id, option=None):
+    """
+    下载一个本子的一章，入口api
+    """
+    option, jm_client = build_client(option)
+    photo_detail = jm_client.get_photo_detail(jm_photo_id)
+    download_by_photo_detail(photo_detail, option)
+
+
 def download_by_photo_detail(photo_detail: JmPhotoDetail,
-                             jm_client: JmcomicClient,
-                             option: JmOption,
-                             fill_photo_data_original=False):
-    if fill_photo_data_original is True:
-        jm_client.fill_photo_data_original(photo_detail)
+                             option=None,
+                             ):
+    """
+    下载一个本子的一章，根据 photo_detail
+    @param photo_detail: 本子章节信息
+    @param option: 选项
+    """
+    option, jm_client = build_client(option)
 
     # 下载准备
     use_cache = option.download_use_disk_cache
@@ -98,10 +129,3 @@ def download_by_photo_detail(photo_detail: JmPhotoDetail,
                             length),
             apply_each_obj_func=download_image,
         )
-
-
-def option(option_filepath: str, use_workspace=True) -> JmOption:
-    if use_workspace is True:
-        option_filepath = workspace(option_filepath)
-
-    return JmOption.create_from_file(option_filepath)

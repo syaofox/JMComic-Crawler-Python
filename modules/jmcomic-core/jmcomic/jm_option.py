@@ -3,77 +3,7 @@ from typing import Dict
 from common import PackerUtil, ProxyBuilder, \
     mkdir_if_not_exists, fix_filepath, of_file_name, of_dir_name, fix_suffix
 
-from .support import *
-from .jm_client import JmcomicClient
-
-
-class InOrderStrategy(FetchStrategy):
-
-    def do_fetch(self):
-        index, photo_len, resp_getter, resp_consumer = self.args()
-
-        while True:
-            if photo_len is not None and index > photo_len:
-                break
-
-            resp_info = resp_getter(index)
-            if resp_info[0] is None:
-                break
-            resp_consumer(resp_info, index)
-            index += 1
-
-
-class MultiThreadStrategy(FetchStrategy):
-    fetch_batch_count = 5
-
-    def do_fetch(self):
-        from common import multi_thread_launcher
-        begin, photo_len, resp_getter, resp_consumer = self.args()
-
-        if photo_len is not None:
-            # 确定要爬多少页
-
-            def accpet_index(index):
-                resp_info = resp_getter(index)
-                if resp_info[0] is None:
-                    return
-                resp_consumer(resp_info, index)
-
-            multi_thread_launcher(
-                iter_objs=range(begin, photo_len + 1),
-                apply_each_obj_func=accpet_index,
-                wait_finish=True,
-            )
-        else:
-            # 不确定要爬多少页
-
-            # 批量单位
-            batch_count = self.fetch_batch_count
-            # 标记位
-            fetch_suffer_none_resp = False
-
-            def accpet_index(index):
-                resp_info = resp_getter(index)
-                if resp_info is None:
-                    nonlocal fetch_suffer_none_resp
-                    fetch_suffer_none_resp = True
-                    return
-                resp_consumer(resp_info, index)
-
-            while True:
-                # 5次5次爬，每5次中，但凡有1次出现了失败，就停止
-
-                multi_thread_launcher(
-                    iter_objs=range(begin, begin + batch_count),
-                    apply_each_obj_func=accpet_index,
-                    wait_finish=True
-                )
-
-                # 检查标记
-                if fetch_suffer_none_resp is False:
-                    begin += batch_count
-                else:
-                    break
+from .jm_service import *
 
 
 # 目录树的组成
@@ -93,11 +23,6 @@ class DownloadDirTree:
     # 根目录 / Photo号 / 图片文件
     Bd_Id_Image = 5
 
-    # 默认值
-    default_author = 'default-author'
-    default_photo_title = 'default-photo-title'
-    default_photo_id = 'default-photo-id'
-
     AdditionalHandler = Callable[[Optional[JmAlbumDetail], Optional[JmPhotoDetail]], str]
     additional_tree_flag_handler_mapping: Dict[int, AdditionalHandler] = {}
 
@@ -110,20 +35,27 @@ class DownloadDirTree:
 
     def deside_image_save_dir(self,
                               album: Optional[JmAlbumDetail],
-                              photo: Optional[JmPhotoDetail],
+                              photo: JmPhotoDetail,
                               ) -> str:
 
-        def dirpath(album_dir: Optional[str], photo_dir):
+        if photo is None:
+            raise AssertionError('章节信息不能为None')
+
+        def dirpath(album_dir: Optional[str], photo_dir: str):
+            """
+            @param album_dir: 相册文件夹名
+            @param photo_dir: 章节文件夹名
+            """
+            from common import fix_windir_name
+            photo_dir = fix_windir_name(photo_dir)
+
             if album_dir is None:
                 return f'{self.Bd}{photo_dir}/'
 
             return f'{self.Bd}{album_dir}/{photo_dir}/'
 
         def photo_dir(flag_for_title):
-            if flag == flag_for_title:
-                return photo.title if photo is not None else self.random_title()
-            else:
-                return photo.photo_id if photo is not None else self.random_id()
+            return photo.title if flag == flag_for_title else photo.photo_id
 
         flag = self.flag
 
@@ -131,7 +63,7 @@ class DownloadDirTree:
             # 根目录 / Album作者 / Photo标题 / 图片文件
             # 根目录 / Album作者 / Photo号 / 图片文件
 
-            author = album.author if album is not None else self.default_author
+            author = album.author if album is not None else JmModuleConfig.default_author
             return dirpath(author, photo_dir(0))
 
         elif flag in (2, 3):
@@ -213,7 +145,7 @@ class JmOption(SaveableEntity):
             download_convert_image_suffix = fix_suffix(download_convert_image_suffix)
         self.download_convert_image_suffix = download_convert_image_suffix
 
-    def decide_image_dir(self, album_detail, photo_detail: Optional[JmPhotoDetail]) -> str:
+    def decide_image_save_dir(self, album_detail, photo_detail) -> str:
         if album_detail is None and photo_detail is not None:
             album_detail = photo_detail.from_album
 
@@ -225,7 +157,7 @@ class JmOption(SaveableEntity):
         return dirpath
 
     def decide_image_filepath(self, photo_detail: JmPhotoDetail, index: int) -> str:
-        dirpath = self.decide_image_dir(photo_detail.from_album, photo_detail)
+        dirpath = self.decide_image_save_dir(photo_detail.from_album, photo_detail)
         image = photo_detail[index]
         suffix = self.download_convert_image_suffix or image.img_file_suffix
         return dirpath + image.img_file_name + suffix
@@ -340,18 +272,18 @@ class JmOption(SaveableEntity):
     # 下面的方法是对【CdnOption】的支持
 
     def build_cdn_option(self, use_multi_thread_strategy=True):
+
         return CdnConfig.create(
             cdn_domain=self.request_meta_data.get('domain', JmModuleConfig.DOMAIN),
-            fetch_strategy=MultiThreadStrategy if use_multi_thread_strategy else InOrderStrategy,
+            fetch_strategy=MultiThreadFetch if use_multi_thread_strategy else InOrderFetch,
             cdn_image_suffix=None,
             use_cache=self.download_use_disk_cache,
             decode_image=self.download_image_then_decode
         )
 
     def build_cdn_crawler(self, use_multi_thread_strategy=True):
-        from .jm_client import CdnCrawler
-        return CdnCrawler(self.build_cdn_option(use_multi_thread_strategy),
-                          self.build_jm_client())
+        return CdnFetchService(self.build_cdn_option(use_multi_thread_strategy),
+                               self.build_jm_client())
 
     def build_cdn_request(self,
                           photo_id: str,
@@ -385,7 +317,7 @@ class JmOption(SaveableEntity):
         suffix: str | None = self.download_convert_image_suffix
 
         def save_path_provider(url, _suffix: str, _index, _is_decode):
-            return '{0}{1}{2}'.format(self.decide_image_dir(album_detail, photo_detail),
+            return '{0}{1}{2}'.format(self.decide_image_save_dir(album_detail, photo_detail),
                                       of_file_name(url, trim_suffix=True),
                                       suffix or _suffix)
 

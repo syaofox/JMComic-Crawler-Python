@@ -2,58 +2,9 @@ from re import compile, Pattern
 from typing import Union
 
 from PIL import Image
-from requests import Response
 from common import require_not_empty
 
 from .jm_entity import *
-
-
-class JmModuleConfig:
-    HTTPS = "https://"
-    DOMAIN = "jmcomic1.rocks"  # jmcomic默认域名
-    JM_REDIRECT_URL = 'https://jm365.me/3YeBdF'
-    JM_PUB_URL = 'https://jmcomic1.bet'
-    JM_SERVER_ERROR_HTML = "Could not connect to mysql! Please check your database settings!"
-    JM_CDN_IMAGE_URL_TEMPLATE = 'https://cdn-msp.{domain}/media/photos/{photo_id}/{index:05}{suffix}'  # index 从1开始
-    SCRAMBLE_0 = 220980
-    SCRAMBLE_10 = 268850
-    SCRAMBLE_8 = 421926  # 2023-02-08后改了图片切割算法
-
-    Resp = Response
-    enable_jm_debug = True
-    debug_printer = print
-    retry_image_suffix = ['.jpg', '.webp', '.gif', '.png']
-    jm_client_caches = {}
-
-    @classmethod
-    def default_headers(cls):
-        return {
-            'authority': cls.DOMAIN,
-            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,'
-                      'application/signed-exchange;v=b3;q=0.9',
-            'accept-language': 'zh-CN,zh;q=0.9',
-            'sec-ch-ua': '"Not_A Brand";v="99", "Google Chrome";v="109", "Chromium";v="109"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-            'sec-fetch-dest': 'document',
-            'sec-fetch-mode': 'navigate',
-            'sec-fetch-site': 'none',
-            'sec-fetch-user': '?1',
-            'upgrade-insecure-requests': '1',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 '
-                          'Safari/537.36',
-        }
-
-    # noinspection PyUnusedLocal
-    @classmethod
-    def jm_debug(cls, topic: str, *args, sep='', end='\n', file=None, from_class='api'):
-        if cls.enable_jm_debug is True:
-            cls.debug_printer(f'【{topic}】', *args, sep=sep, end=end, file=file)
-
-    @classmethod
-    def disable_jm_debug(cls):
-        cls.enable_jm_debug = False
-
 
 jm_debug = JmModuleConfig.jm_debug
 disable_jm_debug = JmModuleConfig.disable_jm_debug
@@ -231,12 +182,12 @@ class JmSearchPattern:
 class JmImageSupport:
 
     @classmethod
-    def save_resp_img(cls, resp: JmModuleConfig.Resp, filepath: str):
+    def save_resp_img(cls, resp: Resp, filepath: str):
         cls.open_Image(resp.content).save(filepath)
 
     @classmethod
     def save_resp_decode_img(cls,
-                             resp: JmModuleConfig.Resp,
+                             resp: Resp,
                              img_detail: JmImageDetail,
                              filepath: str
                              ) -> None:
@@ -322,7 +273,7 @@ class JmImageSupport:
             return 10
         else:
             import hashlib
-            x = 10 if aid < JmModuleConfig.SCRAMBLE_8 else 8
+            x = 10 if aid < JmModuleConfig.SCRAMBLE_NUM_8 else 8
             s = f"{aid}{detail.img_file_name}"  # 拼接
             s = s.encode()
             s = hashlib.md5(s).hexdigest()

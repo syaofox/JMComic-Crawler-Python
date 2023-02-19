@@ -1,9 +1,6 @@
 import requests
-from common import file_exists, change_file_suffix
 
-from .support import *
-
-Resp = JmModuleConfig.Resp
+from .jm_toolkit import *
 
 
 class JmcomicClient:
@@ -110,6 +107,8 @@ class JmcomicClient:
         """
 
         url = self.of_api_url(url) if is_api is True else url
+        if is_api is True:
+            self.debug("api", url)
         kwargs = self._merge_request_kwargs(kwargs)
 
         resp = requests.get(url, **kwargs)
@@ -119,8 +118,8 @@ class JmcomicClient:
                                  f"响应状态码为{resp.status_code}，"
                                  f"URL=[{resp.url}]，"
                                  +
-                                 (f"响应文本=[{resp.text}]" if len(
-                                     resp.text) < 50 else f'响应文本过长(len={len(resp.text)})，不打印')
+                                 (f"响应文本=[{resp.text}]" if len(resp.text) < 50 else
+                                  f'响应文本过长(len={len(resp.text)})，不打印')
                                  )
 
         if is_api is True and resp.text.strip() == JmModuleConfig.JM_SERVER_ERROR_HTML:
@@ -157,131 +156,30 @@ class JmcomicClient:
 
     @staticmethod
     def debug(topic: str, *args, sep='', end='\n', file=None, from_class=debug_from_class):
-        from .support import jm_debug
+        from .jm_toolkit import jm_debug
         jm_debug(topic, *args, sep=sep, end=end, file=file, from_class=from_class)
 
 
-class CdnCrawler:
+# 爬取策略
+class FetchStrategy:
 
     def __init__(self,
-                 option: CdnConfig,
-                 client: 'JmcomicClient',
+                 from_index,
+                 photo_len,
+                 resp_getter,
+                 resp_consumer,
                  ):
-        self.option = option
-        self.client = client
+        self.from_index = from_index
+        self.photo_len = photo_len
+        self.resp_getter = resp_getter
+        self.resp_consumer = resp_consumer
 
-        self.debug = self.client.debug
+    def do_fetch(self):
+        raise NotImplementedError
 
-    def download_photo_from_cdn_directly(self,
-                                         req: CdnRequest,
-                                         ):
-        # 校验参数
-        self.option.check_request_is_valid(req)
-
-        # 基本信息
-        photo_id = req.photo_id
-        scramble_id = req.scramble_id
-        use_cache = self.option.use_cache
-        decode_image = self.option.decode_image
-
-        # 获得响应
-        def get_resp(index: int) -> Tuple[Optional[Resp], str, str]:
-            url = self.option.get_cdn_image_url(photo_id, index)
-            suffix = self.option.cdn_image_suffix
-            pre_try_save_path = req.save_path_provider(url, suffix, index, decode_image)
-
-            # 判断是否命中缓存（预先尝试）
-            if use_cache is True and file_exists(pre_try_save_path):
-                # 命中，返回特殊值
-                return None, suffix, pre_try_save_path
-            else:
-                return self.try_get_cdn_image_resp(
-                    self.client,
-                    url,
-                    suffix,
-                    photo_id,
-                    index,
+    def args(self):
+        return (self.from_index,
+                self.photo_len,
+                self.resp_getter,
+                self.resp_consumer,
                 )
-
-        # 保存响应
-        def save_resp(resp_info: Tuple[Optional[Resp], str, str], index: int):
-            resp, suffix, img_url = resp_info
-
-            # 1. 判断是不是特殊值
-            if resp_info[0] is None:
-                # 是，表示命中缓存，直接返回
-                save_path = resp_info[2]
-                self.debug('图片下载成功',
-                           f'photo-{photo_id}: {index}{suffix}命中磁盘缓存 ({save_path})')
-                return
-
-            # 2. 判断是否命中缓存
-            save_path = req.save_path_provider(img_url, suffix, index, decode_image)
-            if use_cache is True and file_exists(save_path):
-                # 命中，直接返回
-                self.debug('图片下载成功',
-                           f'photo-{photo_id}: {index}{suffix}命中磁盘缓存 ({save_path})')
-                return
-
-            # 3. 保存图片
-            if decode_image is False:
-                JmImageSupport.save_resp_img(resp, save_path)
-            else:
-                JmImageSupport.save_resp_decode_img(
-                    resp,
-                    JmImageDetail.of(photo_id, scramble_id, data_original=img_url),
-                    save_path,
-                )
-
-            # 4. debug 消息
-            self.debug('图片下载成功',
-                       f'photo-{photo_id}: {index}{suffix}下载完成 ('
-                       + ('已解码' if decode_image is True else '未解码') +
-                       f') [{img_url}] → [{save_path}]')
-
-        # 调用爬虫策略
-        self.option.fetch_strategy(
-            req.from_index,
-            req.photo_len,
-            resp_getter=get_resp,
-            resp_consumer=save_resp,
-        ).do_fetch()
-
-    # 准备提供给爬虫策略的函数
-    @staticmethod
-    def try_get_cdn_image_resp(client: JmcomicClient,
-                               url: str,
-                               suffix: str,
-                               photo_id,
-                               index,
-                               ) -> Optional[Tuple[Resp, str, str]]:
-        resp = client.request_get(url, False, False)
-
-        # 第一次校验，不空则直接返回
-        if not client.is_empty_image(resp):
-            return resp, suffix, url
-
-        # 下面进行重试
-        client.debug(
-            '图片获取重试',
-            f'photo-{photo_id}，图片序号为{index}，url=[{url}]'
-        )
-
-        # 重试点1：是否文件后缀名不对？
-        for alter_suffix in JmModuleConfig.retry_image_suffix:
-            url = change_file_suffix(url, alter_suffix)
-            resp = client.request_get(url, False, False)
-            if not client.is_empty_image(resp):
-                client.debug(
-                    '图片获取重试 → 成功√',
-                    f'更改请求后缀（{suffix} -> {alter_suffix}），url={url}'
-                )
-                return resp, alter_suffix, url
-
-        # 结论：可能是图片到头了
-        client.debug(
-            '图片获取重试 ← 失败×',
-            f'更换后缀名不成功，停止爬取。'
-            f'(推断本子长度<={index - 1}。当前图片序号为{index}，已经到达尽头，'
-            f'photo-{photo_id})'
-        )
