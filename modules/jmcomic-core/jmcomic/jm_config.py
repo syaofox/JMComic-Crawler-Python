@@ -1,6 +1,4 @@
-from typing import Optional
-
-from requests import Response
+from common import *
 
 StrNone = Optional[str]
 Resp = Response
@@ -57,3 +55,7 @@ class JmModuleConfig:
     @classmethod
     def disable_jm_debug(cls):
         cls.enable_jm_debug = False
+
+
+jm_debug = JmModuleConfig.jm_debug
+disable_jm_debug = JmModuleConfig.disable_jm_debug

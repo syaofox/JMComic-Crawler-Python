@@ -1,13 +1,6 @@
-from re import compile, Pattern
-from typing import Union
-
 from PIL import Image
-from common import require_not_empty
 
 from .jm_entity import *
-
-jm_debug = JmModuleConfig.jm_debug
-disable_jm_debug = JmModuleConfig.disable_jm_debug
 
 
 class JmcomicText:
