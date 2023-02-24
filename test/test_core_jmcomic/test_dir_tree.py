@@ -1,4 +1,4 @@
-from jmcomic_test import *
+from test_core_jmcomic import *
 
 
 class Test_DirTree(JmTestConfigurable):

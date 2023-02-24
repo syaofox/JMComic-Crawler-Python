@@ -139,7 +139,7 @@ class JmcomicText:
         return clazz(**field_dict)
 
 
-class JmSearchPattern:
+class JmSearchSupport:
     # 用来缩减html的长度
     pattern_html_search_shorten_for = compile('<div class="well well-sm">([\s\S]*)'
                                               '<div class="row">[\s\S]*'
@@ -179,11 +179,11 @@ class JmImageSupport:
         cls.open_Image(resp.content).save(filepath)
 
     @classmethod
-    def save_resp_decode_img(cls,
-                             resp: Resp,
-                             img_detail: JmImageDetail,
-                             filepath: str
-                             ) -> None:
+    def save_resp_decoded_img(cls,
+                              resp: Resp,
+                              img_detail: JmImageDetail,
+                              filepath: str
+                              ) -> None:
         cls.decode_and_save(
             cls.calculate_segmentation_num(img_detail),
             cls.open_Image(resp.content),

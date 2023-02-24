@@ -4,7 +4,7 @@ setup(
     name='jmcomic',
     version='0.3.0',
     description='python-jmcomic-api',
-    author='anonymous',
+    author='Straw',
     packages=find_packages(),
     install_requires=[
         "Pillow>=9.2.0",

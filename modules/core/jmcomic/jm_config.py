@@ -6,13 +6,13 @@ Resp = Response
 
 class JmModuleConfig:
     # 网站相关
-    HTTPS = "https://"
+    HTTP = "https://"
     DOMAIN = "jmcomic1.rocks"  # jmcomic默认域名
-    JM_REDIRECT_URL = f'{HTTPS}jm365.me/3YeBdF'
-    JM_PUB_URL = f'{HTTPS}jmcomic1.bet'
-    JM_CDN_IMAGE_URL_TEMPLATE = HTTPS + 'cdn-msp.{domain}/media/photos/{photo_id}/{index:05}{suffix}'  # index 从1开始
+    JM_REDIRECT_URL = f'{HTTP}jm365.me/3YeBdF'
+    JM_PUB_URL = f'{HTTP}jmcomic1.bet'
+    JM_CDN_IMAGE_URL_TEMPLATE = HTTP + 'cdn-msp.{domain}/media/photos/{photo_id}/{index:05}{suffix}'  # index 从1开始
     JM_SERVER_ERROR_HTML = "Could not connect to mysql! Please check your database settings!"
-    JM_IMAGE_SUFFIX = ['.jpg', '.webp', '.gif', '.png']
+    JM_IMAGE_SUFFIX = ['.jpg', '.webp', '.png', '.gif']
     # 图片分隔相关
     SCRAMBLE_0 = 220980
     SCRAMBLE_10 = 268850

@@ -13,12 +13,13 @@ class WorkEntity(JmBaseEntity, SaveableEntity, IterableEntity):
     cache_getitem_result = True
     cache_field_name = '__cache_items_dict__'
     detail_save_base_dir = workspace()
+    detail_save_file_suffix = '.yml'
 
     def save_base_dir(self):
         return self.detail_save_base_dir
 
     def save_file_name(self) -> str:
-        return f"【{self.get_id_prefix_of_filename()}{self.get_id()}】{self.get_title()}.json"
+        return f"【{self.get_id_prefix_of_filename()}{self.get_id()}】{self.get_title()}{self.detail_save_file_suffix}"
 
     def get_id_prefix_of_filename(self):
         # "JmAlbumDetail" -> "album"

@@ -1,4 +1,4 @@
-from jmcomic_test import *
+from test_core_jmcomic import *
 
 
 class Test_Api(JmTestConfigurable):
@@ -7,7 +7,7 @@ class Test_Api(JmTestConfigurable):
         """
         测试jmcomic模块的api的使用
         """
-        photo_id = "412038"
+        photo_id = "15193"
         jmcomic.download_photo(photo_id, self.option)
 
     def test_download_album_by_id(self):
@@ -19,7 +19,7 @@ class Test_Api(JmTestConfigurable):
         album_id_ls = [
             # '219757',
             '15193',
-            # 'JM412038'
+            # 'JM15193'
         ]
 
         jmcomic.download_album(album_id_ls[0], self.option)

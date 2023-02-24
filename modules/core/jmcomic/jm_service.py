@@ -188,7 +188,7 @@ class CdnFetchService:
             if decode_image is False:
                 JmImageSupport.save_resp_img(resp, save_path)
             else:
-                JmImageSupport.save_resp_decode_img(
+                JmImageSupport.save_resp_decoded_img(
                     resp,
                     JmImageDetail.of(photo_id, scramble_id, data_original=img_url),
                     save_path,

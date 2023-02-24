@@ -1,7 +1,5 @@
 import unittest
 
-from common import *
-
 # noinspection PyUnresolvedReferences
 import jmcomic
 from jmcomic import *
@@ -17,7 +15,7 @@ class JmTestConfigurable(unittest.TestCase):
     @classmethod
     def setUpClass(cls, profile=no_proxy_yml):
         set_application_workspace(cls.application_workspace)
-        WorkEntity.jm_save_base_dir = workspace("/download/", is_dir=True)
+        WorkEntity.detail_save_base_dir = workspace("/download/", is_dir=True)
         option_file = workspace(profile)
         option: JmOption = JmOption.create_from_file(option_file)
         # option.save_to_file(option_file)

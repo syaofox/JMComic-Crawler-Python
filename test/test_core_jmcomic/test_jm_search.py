@@ -1,4 +1,4 @@
-from jmcomic_test import *
+from test_core_jmcomic import *
 
 
 class Test_Search(JmTestConfigurable):
@@ -11,7 +11,7 @@ class Test_Search(JmTestConfigurable):
         html = read_text(workspace(test_file))
 
         # (album_id, title, category_none, label_sub_none, tag_list)
-        for i, line in enumerate(JmSearchPattern.analyse_jm_search_html(html)):
+        for i, line in enumerate(JmSearchSupport.analyse_jm_search_html(html)):
             print(f'index: {i}--------------------------------------------------------\n'
                   f'id: {line[0]}\n'
                   f'title: {line[1]}\n'
