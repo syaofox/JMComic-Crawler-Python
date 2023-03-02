@@ -136,7 +136,7 @@ class JmOption(SaveableEntity):
                  download_use_disk_cache: bool,
                  download_convert_image_suffix: Optional[str],
                  download_image_then_decode: bool,
-                 filepath: Optional[str],
+                 filepath: Optional[str] = None,
                  download_multi_thread_photo_len_limit=30,
                  download_multi_thread_photo_batch_count=10,
                  ):
