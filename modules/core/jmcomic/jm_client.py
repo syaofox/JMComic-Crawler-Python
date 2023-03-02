@@ -1,12 +1,12 @@
 from .jm_toolkit import *
 
 
-class JmcomicClient:
+class JmcomicClient(PostmanImpl):
     debug_from_class = 'jm-client'
 
     def __init__(self, **kwargs):
-        self.meta_data = kwargs
         self.domain = kwargs.pop('domain', JmModuleConfig.DOMAIN)
+        super().__init__(kwargs)
 
     def download_image(self,
                        data_original: str,
@@ -24,21 +24,24 @@ class JmcomicClient:
         @param decode_image: 要保存的是解密后的图还是原图
         """
         # 请求图片
-        resp = self.request_get(data_original,
-                                is_api=False)
+        resp = self.request_get(data_original, is_api=False)
 
         if self.is_empty_image(resp):
             raise AssertionError(f'接收到的图片数据为空: {resp.url}')
 
+        # gif图无需加解密，需要最先判断
+        if self.img_is_not_need_to_decode(data_original, resp):
+            JmImageSupport.save_resp_img(resp, img_save_path, False)
+            return
+
         # 不解密图片，直接返回
         if decode_image is False:
             # 保存图片
-            JmImageSupport.save_resp_img(resp, img_save_path)
-
-        # gif图不能加密，因此需要加一次判断
-        if self.img_is_not_need_to_decode(data_original, resp):
-            JmImageSupport.save_resp_img(resp, img_save_path)
-            return
+            JmImageSupport.save_resp_img(
+                resp,
+                img_save_path,
+                need_convert=suffix_not_equal(data_original, img_save_path),
+            )
 
         JmImageSupport.save_resp_decoded_img(
             resp=resp,
@@ -128,9 +131,10 @@ class JmcomicClient:
             self.debug("api", url)
         kwargs = self._merge_request_kwargs(kwargs)
 
-        resp = requests.get(url, **kwargs)
+        resp = self.get(url, **kwargs)
 
         if require_200 is True and resp.status_code != 200:
+            write_text('./resp.html', resp.text)
             raise AssertionError(f"请求失败，"
                                  f"响应状态码为{resp.status_code}，"
                                  f"URL=[{resp.url}]，"
@@ -152,18 +156,6 @@ class JmcomicClient:
         for k, v in kwargs.items():
             ret[k] = v
         return ret
-
-    # -- 配置方法 --
-
-    def add_meta_data(self, key, value):
-        self.meta_data[key] = value
-        return self
-
-    def remove_meta_data(self, key):
-        if key not in self.meta_data:
-            return None
-
-        return self.meta_data.pop(key)
 
     # -- 类方法 --
 

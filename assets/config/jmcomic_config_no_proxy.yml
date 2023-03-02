@@ -1,11 +1,10 @@
 !!python/object:jmcomic.jm_option.JmOption
 dir_tree: !!python/object:jmcomic.jm_option.DownloadDirTree
   Bd: D:/GitProject/dev/pip/crawler-jmcomic/assets/download/
-  flag: 4
-download_convert_image_suffix: .jpg
+  flag: Bd_Title_Image
+download_convert_image_suffix: null
 download_image_then_decode: true
 download_use_disk_cache: true
-filepath: D:/GitProject/dev/pip/crawler-jmcomic/assets/config/jmcomic_config_no_proxy.yml
 request_meta_data:
   cookies: null
   headers:
@@ -23,4 +22,7 @@ request_meta_data:
     user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
       like Gecko) Chrome/109.0.0.0 Safari/537.36
   proxies: null
-  domain: jmcomic1.rocks
+  domain: jmcomic1.group
+
+
+

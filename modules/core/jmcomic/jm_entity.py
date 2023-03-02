@@ -1,3 +1,5 @@
+from common import *
+
 from .jm_config import *
 
 
@@ -186,7 +188,7 @@ class JmAlbumDetail(WorkEntity):
             # photo_id, photo_index_of_album, photo_title, photo_pub_date
             episode_list = [(album_id, 0, title, pub_date)]
 
-        self.episode_list: List[Tuple] = episode_list
+        self.episode_list: List[Tuple] = self.distinct_episode(episode_list)
 
     def create_photo_detail(self, index) -> Tuple[JmPhotoDetail, Tuple]:
         # 校验参数
@@ -229,6 +231,23 @@ class JmAlbumDetail(WorkEntity):
 
     def __getitem__(self, item) -> JmPhotoDetail:
         return self.create_photo_detail(item)[0]
+
+    @staticmethod
+    def distinct_episode(episode_list):
+        ret = []
+
+        def not_exist(episode):
+            photo_id = episode[0]
+            for each in ret:
+                if each[0] == photo_id:
+                    return False
+            return True
+
+        for episode in episode_list:
+            if not_exist(episode):
+                ret.append(episode)
+
+        return ret
 
 
 class JmSearchPage(IterableEntity):

@@ -14,13 +14,13 @@ class JmcomicText:
     pattern_html_photo_keywords = compile('<meta name="keywords" content="(.*?)" />')
     pattern_html_photo_series_id = compile('var series_id = (\d+);')
 
-    pattern_html_album_album_id = compile('<meta property="og:url" content=".*?/(\d+)/?.*?">')
+    pattern_html_album_album_id = compile('<span class="number">.*?：JM(\d+)</span>')
     pattern_html_album_scramble_id = compile('var scramble_id = (\d+);')
     pattern_html_album_title = compile('panel-heading[\s\S]*?<h1>(.*?)</h1>')
     pattern_html_album_episode_list = compile('<a href=".*?" data-album="(\d+)">\n'
                                               '<li.*>\n第(\d+)話\n(.*)\n'
                                               '<[\s\S]*?>(\d+-\d+-\d+).*?')
-    pattern_html_album_page_count = compile('<span class="pagecount">页数:(\d+)</span>')
+    pattern_html_album_page_count = compile('<span class="pagecount">.*?:(\d+)</span>')
     pattern_html_album_pub_date = compile('itemprop="datePublished" content=".*?">更新日期 : (.*?)</span>')
 
     # album 作者
@@ -117,7 +117,10 @@ class JmcomicText:
             if field_key.endswith("_list"):
                 return pattern.findall(text)
             else:
-                return pattern.search(text)[1]
+                match = pattern.search(text)
+                if match is not None:
+                    return match[1]
+                return None
 
         field_dict = {}
         pattern_name: str
@@ -175,8 +178,19 @@ class JmSearchSupport:
 class JmImageSupport:
 
     @classmethod
-    def save_resp_img(cls, resp: Resp, filepath: str):
-        cls.open_Image(resp.content).save(filepath)
+    def save_resp_img(cls, resp: Resp, filepath: str, need_convert=True):
+        """
+        保存图片的响应数据
+        @param resp: Response对象
+        @param filepath: 响应数据保存的绝对路径
+        @param need_convert: True 使用PIL打开图片再保存; False 直接保存resp.content;
+        如果需要改变图片的格式，比如 .jpg → .png，则需要neet_convert=True。
+        如果不需要改变文件的格式，使用need_convert=False可以跳过PIL解析图片，效率更高。
+        """
+        if need_convert is True:
+            cls.open_Image(resp.content).save(filepath)
+        else:
+            save_resp_content(resp, filepath)
 
     @classmethod
     def save_resp_decoded_img(cls,

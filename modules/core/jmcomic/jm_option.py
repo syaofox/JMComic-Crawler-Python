@@ -23,10 +23,23 @@ class DownloadDirTree:
 
     def __init__(self,
                  Bd: str,
-                 flag: int,
+                 flag: Union[str, int],
                  ):
         self.Bd = fix_filepath(Bd)
-        self.flag = flag
+        self.flag = self.get_flag_enum(flag)
+
+    def get_flag_enum(self, flag):
+        if isinstance(flag, int):
+            return flag
+
+        if not isinstance(flag, str):
+            raise NotImplementedError(flag)
+
+        ret = self.__class__.__dict__.get(flag, None)
+        if ret is None:
+            raise NotImplementedError(flag)
+
+        return ret
 
     def deside_image_save_dir(self,
                               album: Optional[JmAlbumDetail],
@@ -193,7 +206,7 @@ class JmOption(SaveableEntity):
         return jm_option
 
     def save_base_dir(self):
-        return of_dir_name(self.filepath)
+        return of_dir_path(self.filepath)
 
     def save_file_name(self) -> str:
         return of_file_name(self.filepath)
@@ -309,7 +322,7 @@ class JmOption(SaveableEntity):
             photo_detail = client.get_photo_detail(photo_id)
             album_detail = client.fill_from_album(photo_detail)
 
-        suffix: str | None = self.download_convert_image_suffix
+        suffix = self.download_convert_image_suffix
 
         def save_path_provider(url, _suffix: str, _index, _is_decode):
             return '{0}{1}{2}'.format(self.decide_image_save_dir(album_detail, photo_detail),

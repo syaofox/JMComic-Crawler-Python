@@ -1,9 +1,3 @@
-from common import *
-
-StrNone = Optional[str]
-Resp = Response
-
-
 class JmModuleConfig:
     # 网站相关
     HTTP = "https://"

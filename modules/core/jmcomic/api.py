@@ -32,7 +32,7 @@ def download_album(jm_album_id, option=None):
              f'本子作者是【{album_detail.author}】，一共有{len(album_detail)}集本子')
 
     def download_photo(index, photo_detail: JmPhotoDetail, debug_topic='download_album_photo'):
-        jm_client.fill_photo_data_original(photo_detail)
+        photo_detail = jm_client.get_photo_detail(photo_detail.photo_id)
 
         jm_debug(debug_topic,
                  f"下载第[{index + 1}]集: "
