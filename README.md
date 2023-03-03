@@ -51,9 +51,9 @@ jmcomic.download_album('422866') # 传入要下载的album的id，即可下载�
 
   想深入高级的使用，自行看源码和改造代码。
 
-* 使用代理访问JM的一些域名会被CloudFlare拦截，无法访问。
+* 由于CloudFlare会检测ja3指纹，导致该脚本访问非直连的JM域名会直接被CloudFlare拦截，响应状态码403，无法访问。
 
-  如果一定要使用代理，建议使用配置项`request_meta_data.domain` 指定一个不被CloudFlare拦截的JM域名（当然需要你自己测试哪些域名可用）。
+  解决方式: 魔改urllib3，换请求库等（自行google: TLS Fingerprinting）
 
 * JM不是前后端分离的网站，因此本api是通过正则表达式解析HTML网页的信息（详见`JmcomicText`），进而实现的下载图片。
 
