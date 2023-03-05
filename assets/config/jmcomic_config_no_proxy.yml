@@ -19,7 +19,7 @@ client_config:
     - cffi_Session
     - tls_client
   meta_data:
-    proxies: clash
+    proxies: null
     allow_redirects: true
     cookies: null
     headers:
