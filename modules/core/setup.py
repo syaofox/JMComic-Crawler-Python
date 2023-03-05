@@ -13,6 +13,6 @@ setup(
         "requests>=2.28.1",
         "lxml>=4.9.2",
         "PyYAML>=6.0",
-        "common>=0.2.0",
+        "common>=0.3.0",
     ]
 )
