@@ -7,7 +7,7 @@ class JmcomicText:
     pattern_jm_domain = compile('https://([\w.]+)')
     pattern_jm_pa_id = compile('/(photos?|album)/(\d+)')
 
-    pattern_html_photo_photo_id = compile('<meta property="og:url" content=".*?/(\d+)/?.*?">')
+    pattern_html_photo_photo_id = compile('<meta property="og:url" content=".*?/photo/(\d+)/?.*?">')
     pattern_html_photo_scramble_id = compile('var scramble_id = (\d+);')
     pattern_html_photo_title = compile('<title>(.*?)\|.*</title>')
     pattern_html_photo_data_original_list = compile('data-original="(.*?)" id="album_photo_.+?"')
@@ -178,7 +178,7 @@ class JmSearchSupport:
 class JmImageSupport:
 
     @classmethod
-    def save_resp_img(cls, resp: Resp, filepath: str, need_convert=True):
+    def save_resp_img(cls, resp: ReqResp, filepath: str, need_convert=True):
         """
         保存图片的响应数据
         @param resp: Response对象
@@ -194,7 +194,7 @@ class JmImageSupport:
 
     @classmethod
     def save_resp_decoded_img(cls,
-                              resp: Resp,
+                              resp: ReqResp,
                               img_detail: JmImageDetail,
                               filepath: str
                               ) -> None:

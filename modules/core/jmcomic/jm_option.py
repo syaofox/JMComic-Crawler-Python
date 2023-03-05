@@ -132,26 +132,38 @@ class JmOption(SaveableEntity):
 
     def __init__(self,
                  dir_tree: DownloadDirTree,
-                 request_meta_data: dict,
-                 download_use_disk_cache: bool,
-                 download_convert_image_suffix: Optional[str],
-                 download_image_then_decode: bool,
-                 filepath: Optional[str] = None,
+                 client_config: dict,
+                 use_tls_client=True,
+                 filepath: StrNone = None,
+                 disable_jm_module_debug=False,
+                 download_use_disk_cache=True,
+                 download_convert_image_suffix: StrNone = None,
+                 download_image_then_decode=True,
                  download_multi_thread_photo_len_limit=30,
                  download_multi_thread_photo_batch_count=10,
                  ):
+
+        # 请求配置
+        self.use_tls_client = use_tls_client
+        self.client_config = client_config
+        self.client_config['postman_type_list'] = list(Postmans.postman_impl_class_dict.keys())
+
+        # 下载配置
         self.dir_tree = dir_tree
-        self.request_meta_data = request_meta_data
         self.download_use_disk_cache = download_use_disk_cache
         self.download_image_then_decode = download_image_then_decode
-        self.filepath = filepath
         self.download_multi_thread_photo_len_limit = download_multi_thread_photo_len_limit
         self.download_multi_thread_photo_batch_count = download_multi_thread_photo_batch_count
-
         # suffix的标准形式是 ".xxx"。如果传入的是"xxx"，要补成 ".xxx"
         if download_convert_image_suffix is not None:
             download_convert_image_suffix = fix_suffix(download_convert_image_suffix)
         self.download_convert_image_suffix = download_convert_image_suffix
+
+        # 其他配置
+        self.filepath = filepath
+        self.disable_jm_module_debug = disable_jm_module_debug
+        if disable_jm_module_debug:
+            disable_jm_debug()
 
     def decide_image_save_dir(self, album_detail, photo_detail) -> str:
         if album_detail is None and photo_detail is not None:
@@ -172,31 +184,12 @@ class JmOption(SaveableEntity):
 
     @classmethod
     def default(cls) -> 'JmOption':
-        return cls.create(
-            workspace(),
-            DownloadDirTree.Bd_Title_Image,
-            headers=JmModuleConfig.default_headers(),
-            cookies=None,
-            proxies=None,
-        )
-
-    @classmethod
-    def create(cls,
-               download_base_dir: str,
-               dir_tree_flag: int,
-               download_use_disk_cache=True,
-               download_convert_image_suffix=None,
-               download_image_then_decode=True,
-               filepath=None,
-               **request_meta_data,
-               ) -> 'JmOption':
         return JmOption(
-            DownloadDirTree(download_base_dir, dir_tree_flag),
-            request_meta_data,
-            download_use_disk_cache,
-            download_convert_image_suffix,
-            download_image_then_decode,
-            filepath=filepath
+            DownloadDirTree(
+                workspace(),
+                DownloadDirTree.Bd_Title_Image,
+            ),
+            cls.default_client_config(),
         )
 
     @classmethod
@@ -224,25 +217,18 @@ class JmOption(SaveableEntity):
 
     def build_jm_client(self) -> JmcomicClient:
         if self.cache_jm_client is not True:
-            return self.new_jm_client()
+            client = self.new_jm_client()
         else:
             key = self
             client = JmModuleConfig.jm_client_caches.get(key, None)
             if client is None:
                 client = self.new_jm_client()
                 JmModuleConfig.jm_client_caches.setdefault(key, client)
-            return client
+
+        return client
 
     def new_jm_client(self) -> JmcomicClient:
-        meta_data = self.request_meta_data.copy()
-
-        # 处理域名
-        def handle_domain(key='domain'):
-            domain = meta_data.get(key, None)
-            if domain is None or (not isinstance(domain, str)) or len(domain) == 0:
-                meta_data[key] = JmModuleConfig.DOMAIN
-            else:
-                meta_data[key] = JmcomicText.parse_to_jm_domain(meta_data[key])
+        meta_data = self.client_config['meta_data']
 
         # 处理代理
         def handle_proxies(key='proxies'):
@@ -265,15 +251,22 @@ class JmOption(SaveableEntity):
             headers = meta_data.get(key, None)
             if headers is None or (not isinstance(headers, dict)) or len(headers) == 0:
                 meta_data[key] = JmModuleConfig.default_headers()
-                self.request_meta_data[key] = JmModuleConfig.default_headers()
 
         # 处理【特殊配置项】
-        handle_domain()
         handle_proxies()
         handle_headers()
 
-        # 创建实例
-        client = JmcomicClient(**meta_data)
+        # 决定Postman的实现类，根据配置项 client_config.postman
+        postman_clazz = Postmans.get_impl_clazz(self.client_config.get('postman_type', 'cffi'))
+        # 决定域名
+        domain = self.client_config.get('domain', JmModuleConfig.DOMAIN)
+
+        jm_debug('创建JmcomicClient', f'使用域名: {domain}，使用Postman实现: {postman_clazz}')
+        # 创建 JmcomicClient 实例
+        client = JmcomicClient(
+            postman=postman_clazz(meta_data),
+            domain=domain,
+        )
 
         return client
 
@@ -282,7 +275,7 @@ class JmOption(SaveableEntity):
     def build_cdn_option(self, use_multi_thread_strategy=True):
 
         return CdnConfig.create(
-            cdn_domain=self.request_meta_data.get('domain', JmModuleConfig.DOMAIN),
+            cdn_domain=self.client_config.get('domain', JmModuleConfig.DOMAIN),
             fetch_strategy=MultiThreadFetch if use_multi_thread_strategy else InOrderFetch,
             cdn_image_suffix=None,
             use_cache=self.download_use_disk_cache,
@@ -330,6 +323,28 @@ class JmOption(SaveableEntity):
                                       suffix or _suffix)
 
         return save_path_provider
+
+    @classmethod
+    def default_client_config(cls):
+        """
+        client_config:
+          domain: 18comic.vip
+          tls_session: null
+          meta_data:
+            cookies: null
+            headers:
+        """
+        return {
+            'domain': JmModuleConfig.DOMAIN,
+            'tls_session': {
+                'client_identifier': 'chrome_109',
+            },
+            'meta_data': {
+                'cookies': None,
+                'headers': JmModuleConfig.default_headers(),
+                'allow_redirects': True,
+            }
+        }
 
 
 def _register_yaml_constructor():

@@ -7,18 +7,22 @@ class JmModuleConfig:
     JM_CDN_IMAGE_URL_TEMPLATE = HTTP + 'cdn-msp.{domain}/media/photos/{photo_id}/{index:05}{suffix}'  # index 从1开始
     JM_SERVER_ERROR_HTML = "Could not connect to mysql! Please check your database settings!"
     JM_IMAGE_SUFFIX = ['.jpg', '.webp', '.png', '.gif']
+
     # 图片分隔相关
     SCRAMBLE_0 = 220980
     SCRAMBLE_10 = 268850
     SCRAMBLE_NUM_8 = 421926  # 2023-02-08后改了图片切割算法
 
+    # 下载时的一些默认值
     default_author = 'default-author'
     default_photo_title = 'default-photo-title'
     default_photo_id = 'default-photo-id'
 
-    # 配置
+    # debug
     enable_jm_debug = True
     debug_printer = print
+
+    # 缓存
     jm_client_caches = {}
 
     @classmethod

@@ -146,7 +146,7 @@ class CdnFetchService:
         decode_image = self.config.decode_image
 
         # 获得响应
-        def get_resp(index: int) -> Tuple[Optional[Resp], str, str]:
+        def get_resp(index: int) -> Tuple[Optional[ReqResp], str, str]:
             url = self.config.get_cdn_image_url(photo_id, index)
             suffix = self.config.cdn_image_suffix
             pre_try_save_path = req.save_path_provider(url, suffix, index, decode_image)
@@ -165,7 +165,7 @@ class CdnFetchService:
                 )
 
         # 保存响应
-        def save_resp(resp_info: Tuple[Optional[Resp], str, str], index: int):
+        def save_resp(resp_info: Tuple[Optional[ReqResp], str, str], index: int):
             resp, suffix, img_url = resp_info
 
             # 1. 判断是不是特殊值
@@ -215,8 +215,8 @@ class CdnFetchService:
                                suffix: str,
                                photo_id,
                                index,
-                               ) -> Optional[Tuple[Resp, str, str]]:
-        resp = client.request_get(url, False, False)
+                               ) -> Optional[Tuple[ReqResp, str, str]]:
+        resp = client.jm_get(url, False, False)
 
         # 第一次校验，不空则直接返回
         if not client.is_empty_image(resp):
@@ -231,7 +231,7 @@ class CdnFetchService:
         # 重试点1：是否文件后缀名不对？
         for alter_suffix in JmModuleConfig.JM_IMAGE_SUFFIX:
             url = change_file_suffix(url, alter_suffix)
-            resp = client.request_get(url, False, False)
+            resp = client.jm_get(url, False, False)
             if not client.is_empty_image(resp):
                 client.debug(
                     '图片获取重试 → 成功√',

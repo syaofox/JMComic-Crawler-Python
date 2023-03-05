@@ -1,12 +1,12 @@
 from .jm_toolkit import *
 
 
-class JmcomicClient(PostmanImpl):
+class JmcomicClient(PostmanProxy):
     debug_from_class = 'jm-client'
 
-    def __init__(self, **kwargs):
-        self.domain = kwargs.pop('domain', JmModuleConfig.DOMAIN)
-        super().__init__(kwargs)
+    def __init__(self, postman: Postman, domain):
+        super().__init__(postman)
+        self.domain = domain
 
     def download_image(self,
                        data_original: str,
@@ -24,7 +24,7 @@ class JmcomicClient(PostmanImpl):
         @param decode_image: 要保存的是解密后的图还是原图
         """
         # 请求图片
-        resp = self.request_get(data_original, is_api=False)
+        resp = self.jm_get(data_original, is_api=False)
 
         if self.is_empty_image(resp):
             raise AssertionError(f'接收到的图片数据为空: {resp.url}')
@@ -73,7 +73,7 @@ class JmcomicClient(PostmanImpl):
         album_id = JmcomicText.parse_to_photo_id(album_id)
 
         # 请求
-        resp = self.request_get(f"/album/{album_id}")
+        resp = self.jm_get(f"/album/{album_id}")
 
         # 用 JmcomicText 解析 html，返回实体类
         return JmcomicText.analyse_jm_album_html(resp.text)
@@ -83,7 +83,7 @@ class JmcomicClient(PostmanImpl):
         photo_id = JmcomicText.parse_to_photo_id(jm_photo_id)
 
         # 请求
-        resp = self.request_get(f"/photo/{photo_id}")
+        resp = self.jm_get(f"/photo/{photo_id}")
 
         # 用 JmcomicText 解析 html，返回实体类
         return JmcomicText.analyse_jm_photo_html(resp.text)
@@ -101,7 +101,7 @@ class JmcomicClient(PostmanImpl):
         """
         为 photo_detail.data_original_list 赋值
         """
-        resp = self.request_get(f"/photo/{photo_detail.photo_id}")
+        resp = self.jm_get(f"/photo/{photo_detail.photo_id}")
         photo_detail.data_original_list = JmcomicText.pattern_html_photo_data_original_list.findall(resp.text)
 
     # -- search --
@@ -112,7 +112,7 @@ class JmcomicClient(PostmanImpl):
             'search_query': search_query,
         }
 
-        resp = self.request_get('/search/photos', params=params)
+        resp = self.jm_get('/search/photos', params=params)
 
         return JmSearchSupport.analyse_jm_search_html(resp.text)
 
@@ -121,15 +121,13 @@ class JmcomicClient(PostmanImpl):
     def of_api_url(self, api_path):
         return f"{JmModuleConfig.HTTP}{self.domain}{api_path}"
 
-    def request_get(self, url, is_api=True, require_200=True, **kwargs) -> Resp:
+    def jm_get(self, url, is_api=True, require_200=True, **kwargs) -> ReqResp:
         """
         向禁漫发请求的统一入口
         """
-
         url = self.of_api_url(url) if is_api is True else url
         if is_api is True:
             self.debug("api", url)
-        kwargs = self._merge_request_kwargs(kwargs)
 
         resp = self.get(url, **kwargs)
 
@@ -148,19 +146,10 @@ class JmcomicClient(PostmanImpl):
 
         return resp
 
-    def _merge_request_kwargs(self, kwargs) -> dict:
-        """
-        把 kwargs 合并到 self.meta_data.copy()
-        """
-        ret = self.meta_data.copy()
-        for k, v in kwargs.items():
-            ret[k] = v
-        return ret
-
     # -- 类方法 --
 
     @classmethod
-    def is_empty_image(cls, resp: Resp):
+    def is_empty_image(cls, resp: ReqResp):
         return resp.status_code != 200 or len(resp.content) == 0
 
     @staticmethod
@@ -168,7 +157,7 @@ class JmcomicClient(PostmanImpl):
         jm_debug(topic, *args, sep=sep, end=end, file=file, from_class=from_class)
 
     @classmethod
-    def img_is_not_need_to_decode(cls, data_original: str, _resp: Resp):
+    def img_is_not_need_to_decode(cls, data_original: str, _resp: ReqResp):
         return data_original.endswith('.gif')
 
 
